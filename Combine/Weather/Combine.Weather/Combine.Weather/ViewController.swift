@@ -44,15 +44,31 @@ class ViewController: UIViewController {
     }
     
     private func getTemperature(for cityName: String) {
-        let weatherURL = URL(string: "\(openWeatherBaseURL)?APPID=\(openWeatherAPIKey)&q=\(cityName.filter { $0 != " " })&units=metric")!
+        guard let weatherURL = URL(string: "\(openWeatherBaseURL)?APPID=\(openWeatherAPIKey)&q=\(cityName)&units=metric") else { return }
         
         let remoteDataPublisher = URLSession.shared.dataTaskPublisher(for: weatherURL)
-            .tryMap { data, response -> Data in
-                guard let httpResponse = response as? HTTPURLResponse,
-                    httpResponse.statusCode == 200 else {
-                        throw WeatherError.invalidServerResponse
-                }
-                return data
+        .handleEvents(receiveSubscription: { _ in
+            DispatchQueue.main.async {
+                self.searchButton.isEnabled = false
+                self.activityIndicatorView.startAnimating()
+            }
+        }, receiveCompletion: { _ in
+            DispatchQueue.main.async {
+                self.searchButton.isEnabled = true
+                self.activityIndicatorView.stopAnimating()
+            }
+        }, receiveCancel: {
+            DispatchQueue.main.async {
+                self.searchButton.isEnabled = true
+                self.activityIndicatorView.stopAnimating()
+            }
+        })
+        .tryMap { data, response -> Data in
+            guard let httpResponse = response as? HTTPURLResponse,
+                httpResponse.statusCode == 200 else {
+                    throw WeatherError.invalidServerResponse
+            }
+            return data
         }
         .decode(type: Temperature.self, decoder: JSONDecoder())
         .catch { error in
@@ -61,6 +77,7 @@ class ViewController: UIViewController {
         .map { $0.main?.temp ?? 0.0 }
         .replaceError(with: 0.0)
         .eraseToAnyPublisher()
+        .subscribe(on: DispatchQueue.global(qos: .background))
         .receive(on: RunLoop.main)
         
         cancellable = remoteDataPublisher.assign(to: \.temp, on: self)
