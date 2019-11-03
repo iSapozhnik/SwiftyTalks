@@ -26,7 +26,7 @@ class ViewController: UIViewController {
         }.map { access -> UIColor? in
             access ? .green : .red
         }.eraseToAnyPublisher()
-        
+
         let subscriber = Subscribers.Assign(object: view, keyPath: \.backgroundColor)
         contactsPublisher.subscribe(subscriber)
     }
