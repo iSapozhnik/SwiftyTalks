@@ -16,7 +16,7 @@ enum WeatherError: Error {
 class ViewController: UIViewController {
     private let celsiusCharacters = "ºC"
     private let openWeatherBaseURL = "http://api.openweathermap.org/data/2.5/weather"
-    private let openWeatherAPIKey = "13dd13f47c3bb8fe37d5c3326f2fb308"
+    private let openWeatherAPIKey = ""
     
     @IBOutlet weak var cityTextField: UITextField!
     @IBOutlet weak var searchButton: UIButton!
@@ -56,8 +56,8 @@ class ViewController: UIViewController {
         }
         .map { $0.main?.temp ?? 0.0 }
         .map { "\($0) \(self.celsiusCharacters)" }
-//        .subscribe(on: DispatchQueue(label: "Combine.Weather"))
-            .receive(on: OperationQueue.main)
+        .subscribe(on: DispatchQueue(label: "Combine.Weather"))
+        .receive(on: RunLoop.main)
         .sink(receiveCompletion: { completion in
             self.activityIndicatorView.stopAnimating()
             self.searchButton.isEnabled = true
