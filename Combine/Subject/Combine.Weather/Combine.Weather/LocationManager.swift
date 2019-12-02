@@ -10,14 +10,9 @@ import MapKit
 import Combine
 
 final public class LocatioManager: NSObject {
-    public var didChangeLocation = PassthroughSubject<CLLocationCoordinate2D?, Never>()
+    public var didChangeLocation = PassthroughSubject<CLLocation?, Never>()
     
     private let locationManager: CLLocationManager
-    private var location: CLLocation? {
-        didSet {
-            didChangeLocation.send(location?.coordinate)
-        }
-    }
     
     public init(with locationManager: CLLocationManager = CLLocationManager()) {
         self.locationManager = locationManager
@@ -28,18 +23,34 @@ final public class LocatioManager: NSObject {
     public func startUpdating() {
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
-        location = locationManager.location
+        didChangeLocation.send(locationManager.location)
     }
     
     public func stopUpdating() {
         locationManager.stopUpdatingLocation()
+    }
+    
+    public func cityPublisher(for location: CLLocation) -> AnyPublisher<String, Never> {
+        return Future { promise in
+            let geocoder = CLGeocoder()
+            geocoder.reverseGeocodeLocation(location) { placemarks, error in
+                switch (placemarks, error) {
+                case (let placemarks, nil):
+                    let city = placemarks?.last?.locality ?? "Unknown"
+                    promise(.success(city))
+                case (nil, _):
+                    promise(.success("Unknown"))
+                default: break
+                }
+            }
+        }.eraseToAnyPublisher()
     }
 }
 
 extension LocatioManager: CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         print(locations)
-        location = locations.last
+        didChangeLocation.send(locations.last)
     }
 
     public func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {

@@ -17,7 +17,7 @@ enum WeatherError: Error {
 class ViewController: UIViewController {
     private let celsiusCharacters = "ºC"
     private let openWeatherBaseURL = "http://api.openweathermap.org/data/2.5/weather"
-    private let openWeatherAPIKey = ""
+    private let openWeatherAPIKey = "13dd13f47c3bb8fe37d5c3326f2fb308"
     private let locationManager = LocatioManager()
     
     @IBOutlet weak var cityTextField: UITextField!
@@ -42,9 +42,14 @@ class ViewController: UIViewController {
     
     @IBAction func locationTap(_ sender: Any) {
         locationManager.didChangeLocation
-        .replaceNil(with: CLLocationCoordinate2D())
-        .sink { coordinate in
-            self.cityTextField.text = "\(coordinate.latitude),\(coordinate.longitude)"
+        .replaceNil(with: CLLocation(latitude: 0, longitude: 0))
+        .map { [weak self] location -> AnyPublisher<String, Never> in
+            guard let self = self else { return CurrentValueSubject<String, Never>("Unknown").eraseToAnyPublisher() }
+            return self.locationManager.cityPublisher(for: location)
+        }
+        .flatMap { $0 }
+        .sink { city in
+            self.cityTextField.text = city
         }
         .store(in: &cancellableSet)
         locationManager.startUpdating()
