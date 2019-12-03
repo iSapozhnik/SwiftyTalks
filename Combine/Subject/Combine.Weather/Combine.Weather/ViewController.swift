@@ -41,10 +41,12 @@ class ViewController: UIViewController {
     }
     
     @IBAction func locationTap(_ sender: Any) {
+        let defaultLocation = CLLocation(latitude: 0, longitude: 0)
         locationManager.didChangeLocation
-        .replaceNil(with: CLLocation(latitude: 0, longitude: 0))
+        .replaceNil(with: defaultLocation)
         .flatMap {
             return self.locationManager.cityPublisher(for: $0)
+                .replaceError(with: "Unknown")
         }
         .sink { city in
             self.cityTextField.text = city

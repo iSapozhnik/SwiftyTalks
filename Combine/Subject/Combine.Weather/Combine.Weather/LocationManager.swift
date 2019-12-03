@@ -9,6 +9,10 @@
 import MapKit
 import Combine
 
+enum LocationError: Error {
+    case invalidLocation
+}
+
 final public class LocatioManager: NSObject {
     public var didChangeLocation = PassthroughSubject<CLLocation?, Never>()
     
@@ -30,17 +34,16 @@ final public class LocatioManager: NSObject {
         locationManager.stopUpdatingLocation()
     }
     
-    public func cityPublisher(for location: CLLocation) -> AnyPublisher<String, Never> {
+    public func cityPublisher(for location: CLLocation) -> AnyPublisher<String, Error> {
         return Future { promise in
             let geocoder = CLGeocoder()
             geocoder.reverseGeocodeLocation(location) { placemarks, error in
-                switch (placemarks, error) {
-                case (let placemarks, nil):
-                    let city = placemarks?.last?.locality ?? "Unknown"
+                if let city = placemarks?.last?.locality {
                     promise(.success(city))
-                case (nil, _):
-                    promise(.success("Unknown"))
-                default: break
+                } else if let error = error {
+                    promise(.failure(error))
+                } else {
+                    promise(.failure(LocationError.invalidLocation))
                 }
             }
         }.eraseToAnyPublisher()
