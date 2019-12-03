@@ -43,11 +43,9 @@ class ViewController: UIViewController {
     @IBAction func locationTap(_ sender: Any) {
         locationManager.didChangeLocation
         .replaceNil(with: CLLocation(latitude: 0, longitude: 0))
-        .map { [weak self] location -> AnyPublisher<String, Never> in
-            guard let self = self else { return CurrentValueSubject<String, Never>("Unknown").eraseToAnyPublisher() }
-            return self.locationManager.cityPublisher(for: location)
+        .flatMap {
+            return self.locationManager.cityPublisher(for: $0)
         }
-        .flatMap { $0 }
         .sink { city in
             self.cityTextField.text = city
         }
